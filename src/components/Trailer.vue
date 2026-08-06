@@ -31,7 +31,7 @@ const notDisplayImage = () => {
 <template>
   <div
     :style="flag ? { backgroundImage: `url(${image})` } : {}"
-    :class="{ 'bg-blue-600': !flag }"
+    :class="{ 'bg-[#032541]': !flag }"
     class="relative h-100 w-full bg-center bg-cover"
   >
     <div class="absolute inset-0 bg-[#032541] opacity-70"></div>

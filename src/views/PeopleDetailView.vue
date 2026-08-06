@@ -1,45 +1,63 @@
 <script setup>
 import KnownForCard from "@/components/KnownForCard.vue";
 import WorkTimeline from "@/components/WorkTimeline.vue";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 const route = useRoute();
-const data = ref(null);
-const knownFor = ref([]);
+const knownForList = ref([]);
 const creditCount = ref(null);
 const birthYear = ref("");
+const personData = ref(null);
 const combinedCreditsData = ref([]);
+const category = ref("combined_credits");
 onMounted(async () => {
-  const response1 = await fetch(
-    `https://api.themoviedb.org/3/person/${route.params.id}?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
-  );
-  data.value = await response1.json();
-  birthYear.value = data.value.birthday.slice(0, 4);
-  const response2 = await fetch(
-    `https://api.themoviedb.org/3/person/${route.params.id}/movie_credits?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
-  );
-  knownFor.value = await response2.json();
-  knownFor.value = [
-    ...knownFor.value.cast
-      .sort((a, b) => b.popularity - a.popularity)
-      .slice(0, 10),
-  ];
-  const response3 = await fetch(
-    `https://api.themoviedb.org/3/person/${route.params.id}/combined_credits?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
-  );
-  const data3 = await response3.json();
-  combinedCreditsData.value = data3.value.cast;
-  creditCount.value = data3.cast.length;
+  const [allPersonResponse, personResponse, personCombinedCreditsResponse] =
+    await Promise.all([
+      fetch(
+        `https://api.themoviedb.org/3/person/${route.params.id}?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
+      ),
+      fetch(
+        `https://api.themoviedb.org/3/person/${route.params.id}/movie_credits?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
+      ),
+      fetch(
+        `https://api.themoviedb.org/3/person/${route.params.id}/combined_credits?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
+      ),
+    ]);
+  const [data, knownFor, data3] = await Promise.all([
+    allPersonResponse.json(),
+    personResponse.json(),
+    personCombinedCreditsResponse.json(),
+  ]);
+  personData.value = data;
+  if (personData.value.birthday) {
+    birthYear.value = personData.value.birthday.slice(0, 4);
+  }
+  knownForList.value = [...(knownFor.cast || [])]
+    .sort((a, b) => b.popularity - a.popularity)
+    .slice(0, 10);
+  combinedCreditsData.value = [...data3.cast] || [];
+  creditCount.value = data3.cast.length || 0;
 });
 const currentYear = new Date().getFullYear();
+const timelineData = computed(() => {
+  return [...combinedCreditsData.value];
+});
+const changeTimeline = async (timeline) => {
+  category.value = `${timeline}_credits`;
+  const timelineResponse = await fetch(
+    `https://api.themoviedb.org/3/person/${route.params.id}/${category.value}?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
+  );
+  const data = await timelineResponse.json();
+  timelineData.value = [...data.cast] || [...combinedCreditsData.value];
+};
 </script>
 
 <template>
   <header></header>
-  <section v-if="data" class="flex gap-4 m-10">
+  <section v-if="personData" class="flex gap-4 m-10">
     <div class="w-1/4">
       <img
-        :src="`https://image.tmdb.org/t/p/w500/` + data.profile_path"
+        :src="`https://image.tmdb.org/t/p/w500/` + personData.profile_path"
         alt="POSTER OF MOVIE"
         class="h-120 w-full object-fill rounded-2xl"
       />
@@ -47,52 +65,60 @@ const currentYear = new Date().getFullYear();
     <div class="w-3/4">
       <div>
         <div>
-          <p class="font-bold text-3xl">{{ data.name }}</p>
+          <p class="font-bold text-3xl">{{ personData.name }}</p>
         </div>
         <br />
         <div>
           <p class="font-bold">Biography :</p>
-          <p class="text-base">{{ data.biography }}</p>
+          <p class="text-base">
+            {{
+              personData.biography ||
+              `We don't have a biography for ${personData.name}`
+            }}
+          </p>
         </div>
       </div>
       <br />
       <p class="font-bold">Known for :</p>
       <div class="flex overflow-x-auto">
-        <div v-for="item in knownFor">
+        <div v-for="item in knownForList">
           <KnownForCard :data="item" />
         </div>
       </div>
     </div>
   </section>
-  <section v-if="data">
+  <section v-if="personData" class="flex">
     <div class="w-1/4 flex flex-col m-10">
       <p class="font-bold text-xl">Personal Info</p>
       <p class="font-semibold">Stage Name</p>
-      <p>{{ data.also_known_as[0] }}</p>
+      <p>{{ personData.also_known_as[0] || "-" }}</p>
       <br />
       <p class="font-semibold">Known for</p>
-      <p>{{ data.known_for_department }}</p>
+      <p>{{ personData.known_for_department || "-" }}</p>
       <br />
       <p class="font-semibold">Known Credits</p>
-      <p>{{ creditCount }}</p>
+      <p>{{ creditCount || "-" }}</p>
       <br />
       <p class="font-semibold">Gender</p>
-      <p v-if="data.gender == 1">Female</p>
-      <p v-else-if="data.gender == 2">Male</p>
+      <p v-if="personData.gender == 1">Female</p>
+      <p v-else-if="personData.gender == 2">Male</p>
       <br />
       <p class="font-semibold">Birthdate</p>
-      <p>{{ data.birthday }}({{ currentYear - birthYear - 1 }} years old)</p>
+      <p>
+        {{ personData.birthday }}({{ currentYear - birthYear - 1 }} years old)
+      </p>
       <br />
       <p class="font-semibold">Place of Birth</p>
-      <p>{{ data.place_of_birth }}</p>
+      <p>{{ personData.place_of_birth || "-" }}</p>
       <br />
       <p class="font-semibold">Also known as</p>
-      <ul>
-        <li v-for="name in data.also_known_as">{{ name }}</li>
+      <ul v-if="personData.also_known_as.length">
+        <li v-for="name in personData.also_known_as" :key="name">{{ name }}</li>
       </ul>
+      <p v-else>-</p>
     </div>
-    <div class="w-3/4" v-if="combinedCreditsData">
-      <WorkTimeline :data="combinedCreditsData" />
+    <div class="w-3/4" v-if="timelineData.length">
+      <WorkTimeline :data="timelineData" @timeline-change="changeTimeline" />
     </div>
   </section>
 </template>
