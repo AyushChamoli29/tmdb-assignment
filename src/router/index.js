@@ -2,6 +2,7 @@ import HomeView from "@/views/HomeView.vue";
 import MovieView from "@/views/MovieView.vue";
 import PeopleDetailView from "@/views/PeopleDetailView.vue";
 import PeopleView from "@/views/PeopleView.vue";
+import PersonTranslationView from "@/views/PersonTranslationView.vue";
 import SearchView from "@/views/SearchView.vue";
 import TVView from "@/views/TVView.vue";
 import { createRouter, createWebHistory } from "vue-router";
@@ -38,6 +39,11 @@ const router = createRouter({
       path: "/peopleDetail/:id",
       name: "peopleDetail",
       component: PeopleDetailView,
+    },
+    {
+      path: "/person-translations/:id",
+      name: "personTranslation",
+      component: PersonTranslationView,
     },
   ],
 });

@@ -2,6 +2,7 @@
 import { computed, defineProps, defineEmits, ref } from "vue";
 const props = defineProps({
   data: Array,
+  category: String,
 });
 const emit = defineEmits(["timeline-change"]);
 const result = computed(() => {
@@ -9,7 +10,8 @@ const result = computed(() => {
     return {};
   }
   return props.data.reduce((acc, item) => {
-    const date = item.release_date || item.first_air_date;
+    const date =
+      item.release_date || item.first_air_date || item.first_credit_air_date;
     if (!date) return acc;
     const year = date.split("-")[0];
     if (!acc[year]) {
@@ -30,7 +32,6 @@ const showDropDown = () => {
   }
 };
 const timelineChange = (category) => {
-  console.log(category);
   emit("timeline-change", category);
 };
 </script>
@@ -39,17 +40,25 @@ const timelineChange = (category) => {
   <div>
     <div class="flex justify-between px-20">
       <p class="font-bold text-xl">Acting</p>
-      <div @click="showDropDown" class="cursor-pointer relative">
-        all
-        <div
-          class="absolute text-sm bg-white text-black rounded-xl p-2 w-max"
-          :class="{ hidden: !flag }"
-        >
-          <ul>
-            <li @click="timelineChange('movie')">Movies</li>
-            <li @click="timelineChange('tv')">TV Shows</li>
-          </ul>
+      <div class="flex gap-5">
+        <div @click="showDropDown" class="cursor-pointer relative">
+          all
+          <div
+            class="absolute text-sm bg-white text-black rounded-xl p-2 w-max"
+            :class="{ hidden: !flag }"
+          >
+            <ul>
+              <li @click="timelineChange('movie')">Movies</li>
+              <li @click="timelineChange('tv')">TV Shows</li>
+            </ul>
+          </div>
         </div>
+        <button
+          v-show="props.category != 'combined_credits'"
+          @click="timelineChange('combined')"
+        >
+          clear
+        </button>
       </div>
     </div>
     <div

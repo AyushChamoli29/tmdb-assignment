@@ -1,7 +1,8 @@
 <script setup>
 import KnownForCard from "@/components/KnownForCard.vue";
+import PeopleHeader from "@/components/PeopleHeader.vue";
 import WorkTimeline from "@/components/WorkTimeline.vue";
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 const route = useRoute();
 const knownForList = ref([]);
@@ -39,21 +40,50 @@ onMounted(async () => {
   creditCount.value = data3.cast.length || 0;
 });
 const currentYear = new Date().getFullYear();
-const timelineData = computed(() => {
-  return [...combinedCreditsData.value];
-});
-const changeTimeline = async (timeline) => {
-  category.value = `${timeline}_credits`;
-  const timelineResponse = await fetch(
-    `https://api.themoviedb.org/3/person/${route.params.id}/${category.value}?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
+const timelineArray = ref([]);
+const workTimelineData = async (category) => {
+  const creditsResponse = await fetch(
+    `https://api.themoviedb.org/3/person/${route.params.id}/${category}?api_key=2962fb0e58a93fb2212f04f62c3714dd`,
   );
-  const data = await timelineResponse.json();
-  timelineData.value = [...data.cast] || [...combinedCreditsData.value];
+  const data = await creditsResponse.json();
+  timelineArray.value = data.cast;
+};
+onMounted(() => {
+  workTimelineData(category.value);
+});
+watch(category, (newCategory) => {
+  workTimelineData(newCategory);
+});
+const changeTimeline = (timeline) => {
+  category.value = `${timeline}_credits`;
+  console.log(category.value);
+};
+const typeOfProblem = ref("");
+const issueText = ref("");
+const issuePublicReport = ref("yes");
+const issueFlag = ref(0);
+const hideIssueReport = () => {
+  issueFlag.value = 0;
+  typeOfProblem.value = "";
+  issueText.value = "";
+  issuePublicReport.value = "yes";
+};
+const showIssueReport = () => {
+  issueFlag.value = 1;
+};
+const submitIssue = () => {
+  issueFlag.value = 0;
+  typeOfProblem.value = "";
+  issueText.value = "";
+  issuePublicReport.value = "yes";
+  alert("Your issue is submitted");
 };
 </script>
 
 <template>
-  <header></header>
+  <header>
+    <PeopleHeader :id="route.params.id" @show-report="showIssueReport" />
+  </header>
   <section v-if="personData" class="flex gap-4 m-10">
     <div class="w-1/4">
       <img
@@ -86,6 +116,88 @@ const changeTimeline = async (timeline) => {
         </div>
       </div>
     </div>
+    <form>
+      <div
+        class="rounded-xl absolute bg-white h-100 w-150"
+        :class="{ hidden: !issueFlag }"
+      >
+        <div class="flex justify-between p-5 border">
+          <p class="font-semibold text-xl">Report an Issue</p>
+          <button @click="hideIssueReport">X</button>
+        </div>
+        <div class="p-3 border text-sm">
+          <p class="font-semibold text-base">Type of Problem</p>
+          <div class="flex gap-3 flex-wrap">
+            <input
+              type="radio"
+              id="duplicate"
+              value="duplicate"
+              v-model="typeOfProblem"
+            />
+            <label for="duplicate">Duplicate</label>
+            <input
+              type="radio"
+              id="bad_image"
+              value="bad image"
+              v-model="typeOfProblem"
+            />
+            <label for="bad_image">Bad Image</label>
+            <input
+              type="radio"
+              id="design"
+              value="design or functionality issue"
+              v-model="typeOfProblem"
+            />
+            <label for="design">Design or Functionality Issue</label>
+            <input
+              type="radio"
+              id="offensive"
+              value="offensive or spam"
+              v-model="typeOfProblem"
+            />
+            <label for="offensive">Offensive or Spam</label>
+            <input
+              type="radio"
+              id="incorrect"
+              value="incorrect content"
+              v-model="typeOfProblem"
+            />
+            <label for="incorrect">Incorrect Content</label>
+          </div>
+          <div class="m-2 p-2">
+            <p class="font-semibold">Write</p>
+            <textarea
+              v-model="issueText"
+              class="border h-30 w-120 p-2"
+              required
+            ></textarea>
+          </div>
+          <p class="font-semibold">Public Report?</p>
+          <div class="flex gap-2">
+            <input
+              type="radio"
+              value="yes"
+              id="yes"
+              v-model="issuePublicReport"
+              required
+            />
+            <label for="yes">Yes</label>
+            <input
+              type="radio"
+              value="no"
+              id="no"
+              v-model="issuePublicReport"
+              required
+            />
+            <label for="no">No</label>
+          </div>
+          <div class="flex justify-between">
+            <p class="font-semibold">Submit a DMCA takedown request.</p>
+            <button @click="submitIssue">Submit</button>
+          </div>
+        </div>
+      </div>
+    </form>
   </section>
   <section v-if="personData" class="flex">
     <div class="w-1/4 flex flex-col m-10">
@@ -117,8 +229,12 @@ const changeTimeline = async (timeline) => {
       </ul>
       <p v-else>-</p>
     </div>
-    <div class="w-3/4" v-if="timelineData.length">
-      <WorkTimeline :data="timelineData" @timeline-change="changeTimeline" />
+    <div class="w-3/4">
+      <WorkTimeline
+        :data="timelineArray"
+        :category="category"
+        @timeline-change="changeTimeline"
+      />
     </div>
   </section>
 </template>
